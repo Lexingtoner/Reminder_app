@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Reminder_app</string>
     <string name="form_title">Add Reminder</string>
@@ -5,4 +6,7 @@
     <string name="form_date_hint">Select date</string>
     <string name="form_time_hint">Select time</string>
     <string name="form_create">Create</string>
+    <string name="priority_high">High</string>
+    <string name="priority_normal">Normal</string>
+    <string name="priority_low">Low</string>
 </resources>

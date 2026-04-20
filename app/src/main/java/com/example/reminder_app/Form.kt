@@ -5,24 +5,29 @@ import android.app.TimePickerDialog
 import android.icu.util.Calendar
 import android.widget.DatePicker
 import android.widget.TimePicker
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -40,9 +45,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-
 fun Form(viewModel: RemindersViewModel = viewModel(), onReminderAdded: () -> Unit = {}) {
     val context = LocalContext.current
+    val isEditing = viewModel.editingReminderId != null
 
     Column(
         modifier = Modifier
@@ -52,7 +57,7 @@ fun Form(viewModel: RemindersViewModel = viewModel(), onReminderAdded: () -> Uni
             .padding(top = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = stringResource(id = R.string.form_title),
+        Text(text = if (isEditing) "Edit Reminder" else stringResource(id = R.string.form_title),
             style = TextStyle(
                 color = colorResource(id = R.color.white),
                 fontSize = 20.sp,
@@ -62,11 +67,20 @@ fun Form(viewModel: RemindersViewModel = viewModel(), onReminderAdded: () -> Uni
         )
 
         ReminderTextField(viewModel)
+        PrioritySelector(viewModel)
+        CategorySelector(viewModel)
         DateTimeInputFields(viewModel)
-        CreateButton {
-            viewModel.addReminder(context)
-            onReminderAdded()
-        }
+        FormButtons(
+            isEditing = isEditing,
+            onSave = {
+                viewModel.addReminder(context)
+                onReminderAdded()
+            },
+            onCancel = {
+                viewModel.clearForm()
+                onReminderAdded()
+            }
+        )
     }
 }
 
@@ -77,11 +91,13 @@ fun ReminderTextField(viewModel: RemindersViewModel) {
         value = viewModel.text,
         onValueChange = { viewModel.text = it },
         label = { Text(text = stringResource(id = R.string.form_text_hint)) },
-        colors = TextFieldDefaults.textFieldColors(
-            containerColor = Color.Transparent,
-            textColor = colorResource(id = R.color.blue),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent,
+            focusedTextColor = colorResource(id = R.color.blue),
+            unfocusedTextColor = colorResource(id = R.color.blue),
             cursorColor = colorResource(id = R.color.blue),
-            placeholderColor = colorResource(id = R.color.blue),
             focusedLabelColor = colorResource(id = R.color.blue),
             unfocusedLabelColor = colorResource(id = R.color.blue),
             focusedIndicatorColor = Color.Transparent,
@@ -90,9 +106,90 @@ fun ReminderTextField(viewModel: RemindersViewModel) {
         ),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 10.dp, end = 10.dp, bottom = 8.dp)
     )
+}
 
+@Composable
+fun PrioritySelector(viewModel: RemindersViewModel) {
+    val expanded = remember { mutableStateOf(false) }
+    val priorities = listOf(Priority.HIGH, Priority.NORMAL, Priority.LOW)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 10.dp, end = 10.dp, bottom = 8.dp)
+    ) {
+        Text("Priority", color = colorResource(id = R.color.blue), fontSize = 12.sp)
+        Box {
+            Button(
+                onClick = { expanded.value = !expanded.value },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorResource(id = R.color.navy)
+                )
+            ) {
+                Text(viewModel.priority.name, color = colorResource(id = R.color.blue))
+            }
+            DropdownMenu(
+                expanded = expanded.value,
+                onDismissRequest = { expanded.value = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                priorities.forEach { priority ->
+                    DropdownMenuItem(
+                        text = { Text(priority.name) },
+                        onClick = {
+                            viewModel.priority = priority
+                            expanded.value = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CategorySelector(viewModel: RemindersViewModel) {
+    val expanded = remember { mutableStateOf(false) }
+    val categories = listOf("Work", "Personal", "Shopping", "Health", "Other")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 10.dp, end = 10.dp, bottom = 8.dp)
+    ) {
+        Text("Category", color = colorResource(id = R.color.blue), fontSize = 12.sp)
+        Box {
+            Button(
+                onClick = { expanded.value = !expanded.value },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorResource(id = R.color.navy)
+                )
+            ) {
+                Text(viewModel.category, color = colorResource(id = R.color.blue))
+            }
+            DropdownMenu(
+                expanded = expanded.value,
+                onDismissRequest = { expanded.value = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                categories.forEach { category ->
+                    DropdownMenuItem(
+                        text = { Text(category) },
+                        onClick = {
+                            viewModel.category = category
+                            expanded.value = false
+                        }
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -134,8 +231,10 @@ fun DateInputField(viewModel: RemindersViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { datePickerDialog.show() },
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = colorResource(id = R.color.navy)
+            colors = TextFieldDefaults.colors(
+                disabledContainerColor = colorResource(id = R.color.navy),
+                focusedContainerColor = colorResource(id = R.color.navy),
+                unfocusedContainerColor = colorResource(id = R.color.navy)
             ),
             enabled = false
         )
@@ -172,8 +271,10 @@ fun TimeInputField(viewModel: RemindersViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { timePickerDialog.show() },
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = colorResource(id = R.color.navy)
+            colors = TextFieldDefaults.colors(
+                disabledContainerColor = colorResource(id = R.color.navy),
+                focusedContainerColor = colorResource(id = R.color.navy),
+                unfocusedContainerColor = colorResource(id = R.color.navy)
             ),
             enabled = false
         )
@@ -188,37 +289,64 @@ fun TimeInputField(viewModel: RemindersViewModel) {
 }
 
 @Composable
-fun CreateButton(onClick: () -> Unit) {
+fun FormButtons(isEditing: Boolean, onSave: () -> Unit, onCancel: () -> Unit) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    Button(
-        onClick = {
-            onClick()
-            keyboardController?.hide()
-        },
+    Row(
         modifier = Modifier
-            .padding(bottom = 10.dp, start = 10.dp, end = 10.dp)
             .fillMaxWidth()
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        colorResource(id = R.color.button_gradient_purple),
-                        colorResource(id = R.color.button_gradient_blue)
+            .padding(bottom = 10.dp, start = 10.dp, end = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (isEditing) {
+            OutlinedButton(
+                onClick = {
+                    onCancel()
+                    keyboardController?.hide()
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                colorResource(id = R.color.navy),
+                                colorResource(id = R.color.navy)
+                            )
+                        ),
+                        shape = RoundedCornerShape(15.dp)
                     )
+            ) {
+                Text("Cancel", color = colorResource(id = R.color.blue))
+            }
+        }
+
+        Button(
+            onClick = {
+                onSave()
+                keyboardController?.hide()
+            },
+            modifier = Modifier
+                .weight(1f)
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            colorResource(id = R.color.button_gradient_purple),
+                            colorResource(id = R.color.button_gradient_blue)
+                        )
+                    ),
+                    shape = RoundedCornerShape(15.dp)
                 ),
-                shape = RoundedCornerShape(15.dp)
-            ),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent
-        )
-    )
-    {
-        Text(
-            stringResource(id = R.string.form_create),
-            style = TextStyle(
-                color = Color.White,
-                fontWeight = FontWeight.Bold
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent
             )
-        )
+        ) {
+            Text(
+                if (isEditing) "Update" else stringResource(id = R.string.form_create),
+                style = TextStyle(
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
     }
 }
